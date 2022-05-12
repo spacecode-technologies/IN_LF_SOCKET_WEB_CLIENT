@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LF Middleware Client</title>
+    <script type="application/javascript" src="LFDevice.js"></script>
+</head>
+<style>
+    .active {
+        background-color: yellow;
+    }
+    .inactive {
+        background-color: white;
+    }
+</style>
+<body>
+    <h1>LF Middleware Client</h1>
+
+    <select id="usbDevices">
+        <option value="">Select USB Device</option>
+    </select>
+    <button id="btnConnectUsb" onclick="connectDeviceUsb()">Connect</button>
+    <button id="btnDisconnectUsb" onclick="disconnectDeviceUsb()">Disconnect</button>
+    <label>or</label>
+    <input id="inputIp" type="text" value="219.91.168.168:8080" />
+    <button id="btnConnectEth" onclick="connectDeviceEth()">Connect</button>
+    <button id="btnDisconnectEth" onclick="disconnectDeviceEth()">Disconnect</button>
+    <br>
+    <br>
+
+    <button onclick="_startScan()">Start Scan</button>
+    <button onclick="_stopScan()">Stop Scan</button>
+    <input type="checkbox" id="continuousMode"/>Continuous Mode
+    <button onclick="_refreshTags()">Refresh Tags</button>
+
+    <input type="checkbox" id="tag"
+
+    <br>
+    <hr>
+    <h3>Scanned Tags</h3>
+    <ol id="tagList" style="border: 1px solid black; height: 300px; overflow: auto;"></ol>
+
+    <hr>
+
+    <button onclick="_ledOn()">LED On</button>
+    <button onclick="_allAtOnce()">All at once</button>
+    <button onclick="_ledOff()">LED Off</button>
+    <br>
+
+    <p><b>Status:</b> <span id="statusInfo"></span></p>
+
+<script type="application/javascript">
+
+    let statusInfo = null
+    let tagList = null
+
+    function init() {
+        statusInfo = document.getElementById("statusInfo");
+        tagList = document.getElementById("tagList");
+        connectionListener((response) => {
+            statusInfo.innerHTML = response.message;
+            if (response.status) {
+                let devices = response.devices
+                devices.forEach(item => {
+                    console.log(item)
+                    let deviceItem = document.createElement("option")
+                    deviceItem.value = item.deviceId
+                    deviceItem.innerHTML = item.deviceId
+                    document.getElementById("usbDevices").append(deviceItem)
+                })
+                addTag()
+                scanStarted()
+                scanStop()
+                scanCompleted()
+            }
+        })
+    }
+
+    function selectTag(tag) {
+        let tagItem = document.getElementById(tag);
+        let status = tagItem.getAttribute("selected");
+        if (status === "false") {
+            tagItem.setAttribute("selected", "true");
+            tagItem.setAttribute("class", "active");
+        }
+        else {
+            tagItem.setAttribute("selected", "false");
+            tagItem.setAttribute("class", "inactive");
+
+        }
+
+    }
+
+    function addTag() {
+        addTagListener((response) => {
+            let tagId = response;
+            let tag = document.createElement("li");
+            tag.innerHTML = tagId;
+            tag.setAttribute("id", tagId);
+            tag.setAttribute("onClick", "selectTag('"+tagId+"')");
+            tag.setAttribute("selected", "false");
+            tag.setAttribute("class", "inactive");
+            tagList.appendChild(tag);
+        })
+    }
+
+    function scanStarted() {
+        scanStartedListener((response) => {
+            statusInfo.innerHTML = response;
+        })
+    }
+
+    function scanStop() {
+        scanStopListener((response) => {
+            statusInfo.innerHTML = response;
+        })
+    }
+
+    function scanCompleted() {
+        scanCompletedListener((response) => {
+            let status = response.status;
+            if (status) {
+
+            }
+            statusInfo.innerHTML = response.message;
+        })
+    }
+
+    function connectDeviceUsb() {
+        statusInfo.innerHTML = "Connecting to USB Device";
+        let deviceId = document.getElementById("usbDevices").value;
+        console.log(deviceId)
+        if (deviceId !== "") {
+            connectDevice(deviceId, (response) => {
+                statusInfo.innerHTML = response.message;
+            })
+        } else {
+            alert("Please select the valid device id")
+        }
+    }
+
+    function disconnectDeviceUsb() {
+        disconnectDevice((response) => {
+            statusInfo.innerHTML = response.message;
+        })
+    }
+
+    function connectDeviceEth() {
+        statusInfo.innerHTML = "Connecting to Ethernet Device";
+        let deviceId = document.getElementById("inputIp").value;
+        connectDevice(deviceId, (response) => {
+            statusInfo.innerHTML = response.message;
+        })
+    }
+
+    function disconnectDeviceEth() {
+        disconnectDevice((response) => {
+            statusInfo.innerHTML = response.message;
+        })
+    }
+
+    function _startScan() {
+        let scanMode = document.getElementById("continuousMode").checked ? "continousMode" : "none"
+        startScan(scanMode, (response) => {
+            tagList.innerHTML = "";
+            statusInfo.innerHTML = response.message;
+        })
+    }
+
+    function _stopScan() {
+        stopScan((response) => {
+            statusInfo.innerHTML = response.message
+        })
+    }
+
+    function _refreshTags() {
+        refreshTags((response) => {
+            tagList.innerHTML = "";
+            statusInfo.innerHTML = response.message;
+        })
+    }
+
+    function _ledOn() {
+        let tagItemList = tagList.getElementsByTagName("li");
+        let tags = [];
+        for (let i=0; i<tagItemList.length; i++) {
+            let tagItem = tagItemList[i];
+            if (tagItem.getAttribute("selected") === "true")
+                tags.push(tagItem.innerHTML.split(',')[1].split('-')[1])
+        }
+        console.log(tags);
+        ledOn(tags, (response) => {
+            statusInfo.innerHTML = response.message;
+        });
+    }
+
+    function _allAtOnce() {
+        let tagItemList = tagList.getElementsByTagName("li");
+        let tags = [];
+        for (let i=0; i<tagItemList.length; i++) {
+            let tagItem = tagItemList[i];
+            tags.push(tagItem.innerHTML.split(',')[1].split('-')[1])
+
+        }
+        console.log(tags);
+        ledOn(tags, (response) => {
+            statusInfo.innerHTML = response.message;
+        });
+    }
+
+    function _ledOff() {
+        ledOff((response) => {
+            statusInfo.innerHTML = response.message;
+        })
+    }
+</script>
+</body>
+</html>
